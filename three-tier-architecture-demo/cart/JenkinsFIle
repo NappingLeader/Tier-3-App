@@ -1,0 +1,46 @@
+pipeline {
+    agent any
+
+    environment {
+        REGISTRY = 'docker754'
+        DOCKER_CREDENTIALS_ID = 'docker-creds'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/NappingLeader/Tier-3-App/tree/main/three-tier-architecture-demo', branch: 'main'
+            }
+        }
+
+        stage('Build & Test Services') {
+            parallel {
+                stage('cart') {
+                    steps {
+                        dir('cart') {
+                            sh 'docker build -t $REGISTRY/cart:latest .'
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Push to Registry') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: "$DOCKER_CREDENTIALS_ID", usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    sh 'echo $PASS | docker login $REGISTRY -u $USER --password-stdin'
+                    sh 'docker push $REGISTRY/cart:latest'
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Microservices deployed successfully!'
+        }
+        failure {
+            echo 'Deployment failed. Please check the logs.'
+        }
+    }
+}
