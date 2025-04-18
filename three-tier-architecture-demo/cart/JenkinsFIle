@@ -7,6 +7,7 @@ pipeline {
     }
 
     environment {
+        OCKER_IMAGE = 'docker:24.0.6-dind'
         DOCKER_CONFIG = "${env.WORKSPACE}/.docker"
         REGISTRY = 'docker754'
         DOCKER_CREDENTIALS_ID = 'docker-creds'
