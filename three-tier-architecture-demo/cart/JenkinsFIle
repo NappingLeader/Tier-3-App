@@ -18,7 +18,7 @@ pipeline {
                 stage('cart') {
                     steps {
                         dir('cart') {
-                            sh 'docker build -t $REGISTRY/cart:latest .'
+                            sh 'docker build -t $REGISTRY/cartservice:latest .'
                         }
                     }
                 }
