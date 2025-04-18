@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/NappingLeader/Tier-3-App/tree/main/three-tier-architecture-demo', branch: 'main'
+                git url: 'https://github.com/NappingLeader/Tier-3-App.git', branch: 'main'
             }
         }
 
@@ -17,7 +17,7 @@ pipeline {
             parallel {
                 stage('cart') {
                     steps {
-                        dir('cart') {
+                        dir('three-tier-architecture-demo/cart') {
                             sh 'docker build -t $REGISTRY/cartservice:latest .'
                         }
                     }
@@ -29,7 +29,7 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: "$DOCKER_CREDENTIALS_ID", usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     sh 'echo $PASS | docker login $REGISTRY -u $USER --password-stdin'
-                    sh 'docker push $REGISTRY/cart:latest'
+                    sh 'docker push $REGISTRY/cartservice:latest'
                 }
             }
         }
