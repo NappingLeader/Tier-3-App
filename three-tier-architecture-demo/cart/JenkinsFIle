@@ -2,7 +2,7 @@ pipeline {
     agent {
         docker {
             image 'docker:24.0.6-dind' // Or a Docker image that includes Docker CLI
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
+            args 'u -0 -v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
 
