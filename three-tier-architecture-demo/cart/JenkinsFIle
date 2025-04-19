@@ -1,22 +1,27 @@
 pipeline {
     agent {
         docker {
-            image 'docker:24.0.6-dind'  // Docker-in-Docker image
-            args '-u 0 -v /var/run/docker.sock:/var/run/docker.sock --dns=8.8.8.8'  // Mount Docker socket to allow Docker commands to run
+            image 'docker:24.0.6-dind'  // Docker-in-Docker (DinD)
+            args '-u 0 -v /var/run/docker.sock:/var/run/docker.sock --dns=8.8.8.8'  // Ensures Docker CLI works inside the container
         }
     }
 
     environment {
-        DOCKER_IMAGE = 'docker:24.0.6-dind'   // Docker image to use
+        // Removed redundant DOCKER_IMAGE (already defined in agent)
         DOCKER_CONFIG = "${env.WORKSPACE}/.docker"
-        REGISTRY = 'docker.io/docker754/cartservice'  // Correct Docker Hub registry path
-        DOCKER_CREDENTIALS_ID = 'docker-creds' // Jenkins credentials ID for Docker login
+        REGISTRY = 'docker.io/docker754/cartservice'  // Correct Docker Hub path
+        DOCKER_CREDENTIALS_ID = 'docker-creds'  // Jenkins credentials ID
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/NappingLeader/Tier-3-App.git', branch: 'main'
+                checkout([  // More reliable than plain 'git'
+                    $class: 'GitSCM',
+                    branches: [[name: 'main']],
+                    extensions: [],
+                    userRemoteConfigs: [[url: 'https://github.com/NappingLeader/Tier-3-App.git']]
+                ])
             }
         }
 
@@ -26,8 +31,14 @@ pipeline {
                     steps {
                         dir('three-tier-architecture-demo/cart') {
                             script {
-                                // Build Docker image for the cart service
-                                sh 'docker build -t $REGISTRY:latest .'
+                                // Build with proper caching
+                                sh '''
+                                    docker build \
+                                        --no-cache \  // Optional: Ensures clean build
+                                        -t $REGISTRY:latest \
+                                        --label "build_number=${BUILD_NUMBER}" \
+                                        .
+                                '''
                             }
                         }
                     }
@@ -37,12 +48,19 @@ pipeline {
 
         stage('Push to Registry') {
             steps {
-                withCredentials([usernamePassword(credentialsId: "$DOCKER_CREDENTIALS_ID", usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                withCredentials([[
+                    $class: 'UsernamePasswordMultiBinding',
+                    credentialsId: env.DOCKER_CREDENTIALS_ID,  // Proper variable reference
+                    usernameVariable: 'DOCKER_USERNAME',
+                    passwordVariable: 'DOCKER_PASSWORD'
+                ]]) {
                     script {
-                        // Log in to Docker Hub (no registry URL needed)
-                        sh 'echo $PASS | docker login -u $USER --password-stdin'
-                        // Push the Docker image to the registry
-                        sh 'docker push $REGISTRY:latest'
+                        sh '''
+                            echo "$DOCKER_PASSWORD" | docker login \
+                                -u "$DOCKER_USERNAME" \
+                                --password-stdin
+                            docker push $REGISTRY:latest
+                        '''
                     }
                 }
             }
@@ -50,11 +68,15 @@ pipeline {
     }
 
     post {
+        always {
+            sh 'docker logout'  // Cleanup credentials
+        }
         success {
-            echo 'Microservices built and pushed to registry successfully!'
+            echo "✅ Success! Image pushed to: ${REGISTRY}:latest"
         }
         failure {
-            echo 'Build or push failed. Please check the logs.'
+            echo '❌ Pipeline failed - check logs above'
+            // Optional: Add Slack/email notification here
         }
     }
 }
