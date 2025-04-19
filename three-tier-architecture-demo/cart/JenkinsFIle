@@ -36,8 +36,8 @@ pipeline {
                 ]]) {
                     script {
                         sh '''
-                            echo "$DOCKER_PASS" | docker login \
-                                -u "$DOCKER_USER" \  // Use plain username
+                            echo "$DOCKER_PASS" | docker login 
+                                -u "$DOCKER_USER"   // Use plain username
                                 --password-stdin
                             docker push $REGISTRY:latest
                         '''
