@@ -1,16 +1,16 @@
 pipeline {
     agent {
         docker {
-            image 'docker:24.0.6-dind' // Docker-in-Docker image
-            args '-u 0 -v /var/run/docker.sock:/var/run/docker.sock'
+            image 'docker:24.0.6-dind'  // Docker-in-Docker image
+            args '-u 0 -v /var/run/docker.sock:/var/run/docker.sock'  // Mount Docker socket to allow Docker commands to run
         }
     }
 
     environment {
-        DOCKER_IMAGE = 'docker:24.0.6-dind'
+        DOCKER_IMAGE = 'docker:24.0.6-dind'   // Docker image to use
         DOCKER_CONFIG = "${env.WORKSPACE}/.docker"
-        REGISTRY = 'docker754'
-        DOCKER_CREDENTIALS_ID = 'docker-creds'
+        REGISTRY = 'docker754'                 // Your Docker registry name
+        DOCKER_CREDENTIALS_ID = 'docker-creds' // Jenkins credentials ID for Docker login
     }
 
     stages {
@@ -26,7 +26,7 @@ pipeline {
                     steps {
                         dir('three-tier-architecture-demo/cart') {
                             script {
-                                // Build Docker image
+                                // Build Docker image for the cart service
                                 sh 'docker build -t $REGISTRY/cartservice:latest .'
                             }
                         }
@@ -39,9 +39,9 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: "$DOCKER_CREDENTIALS_ID", usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     script {
-                        // Log in to Docker registry
+                        // Log in to the Docker registry
                         sh 'echo $PASS | docker login $REGISTRY -u $USER --password-stdin'
-                        // Push Docker image
+                        // Push the Docker image to the registry
                         sh 'docker push $REGISTRY/cartservice:latest'
                     }
                 }
