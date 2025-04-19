@@ -1,4 +1,5 @@
 pipeline {
+pipeline {
     agent {
         docker {
             image 'docker:24.0.6-dind'
@@ -7,38 +8,21 @@ pipeline {
     }
 
     environment {
-        DOCKER_CONFIG = "${env.WORKSPACE}/.docker"
-        REGISTRY = 'docker.io/docker754/cartservice'
-        DOCKER_CREDENTIALS_ID = 'docker-creds'
+        REGISTRY = 'docker.io/docker754/cartservice'  // Registry path for image
+        DOCKER_CREDENTIALS_ID = 'docker-creds'       // Jenkins credentials ID
     }
 
     stages {
         stage('Checkout') {
             steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: 'main']],
-                    userRemoteConfigs: [[url: 'https://github.com/NappingLeader/Tier-3-App.git']]
-                ])
+                checkout scm  // Simplified checkout
             }
         }
 
-        stage('Build & Test Services') {
-            parallel {
-                stage('cart') {
-                    steps {
-                        dir('three-tier-architecture-demo/cart') {
-                            script {
-                                sh """
-                                    docker build \
-                                        --no-cache \
-                                        -t $REGISTRY:latest \
-                                        --label "build_number=${BUILD_NUMBER}" \
-                                        .
-                                """
-                            }
-                        }
-                    }
+        stage('Build') {
+            steps {
+                dir('three-tier-architecture-demo/cart') {
+                    sh 'docker build --no-cache -t $REGISTRY:latest .'
                 }
             }
         }
@@ -48,16 +32,16 @@ pipeline {
                 withCredentials([[
                     $class: 'UsernamePasswordMultiBinding',
                     credentialsId: env.DOCKER_CREDENTIALS_ID,
-                    usernameVariable: 'DOCKER_USERNAME',
-                    passwordVariable: 'DOCKER_PASSWORD'
+                    usernameVariable: 'DOCKER_USER',  // Just the username (no repo path)
+                    passwordVariable: 'DOCKER_PASS'
                 ]]) {
                     script {
-                        sh """
-                            echo "$DOCKER_PASSWORD" | docker login \
-                                -u "$DOCKER_USERNAME" \
+                        sh '''
+                            echo "$DOCKER_PASS" | docker login \
+                                -u "$DOCKER_USER" \  // Use plain username
                                 --password-stdin
                             docker push $REGISTRY:latest
-                        """
+                        '''
                     }
                 }
             }
@@ -66,13 +50,12 @@ pipeline {
 
     post {
         always {
-            sh 'docker logout'
-        }
-        success {
-            echo "✅ Success! Image pushed to: ${REGISTRY}:latest"
+            sh 'docker logout'  // Cleanup
         }
         failure {
-            echo '❌ Pipeline failed - check logs above'
+            echo "❌ Push failed. Verify:"
+            echo "1. Docker Hub credentials in Jenkins"
+            echo "2. Registry path: $REGISTRY"
         }
     }
 }
