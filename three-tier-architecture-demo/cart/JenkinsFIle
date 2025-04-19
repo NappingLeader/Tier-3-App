@@ -1,25 +1,23 @@
 pipeline {
     agent {
         docker {
-            image 'docker:24.0.6-dind'  // Docker-in-Docker (DinD)
-            args '-u 0 -v /var/run/docker.sock:/var/run/docker.sock --dns=8.8.8.8'  // Ensures Docker CLI works inside the container
+            image 'docker:24.0.6-dind'
+            args '-u 0 -v /var/run/docker.sock:/var/run/docker.sock --dns=8.8.8.8'
         }
     }
 
     environment {
-        // Removed redundant DOCKER_IMAGE (already defined in agent)
         DOCKER_CONFIG = "${env.WORKSPACE}/.docker"
-        REGISTRY = 'docker.io/docker754/cartservice'  // Correct Docker Hub path
-        DOCKER_CREDENTIALS_ID = 'docker-creds'  // Jenkins credentials ID
+        REGISTRY = 'docker.io/docker754/cartservice'
+        DOCKER_CREDENTIALS_ID = 'docker-creds'
     }
 
     stages {
         stage('Checkout') {
             steps {
-                checkout([  // More reliable than plain 'git'
+                checkout([
                     $class: 'GitSCM',
                     branches: [[name: 'main']],
-                    extensions: [],
                     userRemoteConfigs: [[url: 'https://github.com/NappingLeader/Tier-3-App.git']]
                 ])
             }
@@ -31,14 +29,13 @@ pipeline {
                     steps {
                         dir('three-tier-architecture-demo/cart') {
                             script {
-                                // Build with proper caching
-                                sh '''
+                                sh """
                                     docker build \
-                                        --no-cache \  // Optional: Ensures clean build
+                                        --no-cache \
                                         -t $REGISTRY:latest \
                                         --label "build_number=${BUILD_NUMBER}" \
                                         .
-                                '''
+                                """
                             }
                         }
                     }
@@ -50,17 +47,17 @@ pipeline {
             steps {
                 withCredentials([[
                     $class: 'UsernamePasswordMultiBinding',
-                    credentialsId: env.DOCKER_CREDENTIALS_ID,  // Proper variable reference
+                    credentialsId: env.DOCKER_CREDENTIALS_ID,
                     usernameVariable: 'DOCKER_USERNAME',
                     passwordVariable: 'DOCKER_PASSWORD'
                 ]]) {
                     script {
-                        sh '''
+                        sh """
                             echo "$DOCKER_PASSWORD" | docker login \
                                 -u "$DOCKER_USERNAME" \
                                 --password-stdin
                             docker push $REGISTRY:latest
-                        '''
+                        """
                     }
                 }
             }
@@ -69,14 +66,13 @@ pipeline {
 
     post {
         always {
-            sh 'docker logout'  // Cleanup credentials
+            sh 'docker logout'
         }
         success {
             echo "✅ Success! Image pushed to: ${REGISTRY}:latest"
         }
         failure {
             echo '❌ Pipeline failed - check logs above'
-            // Optional: Add Slack/email notification here
         }
     }
 }
