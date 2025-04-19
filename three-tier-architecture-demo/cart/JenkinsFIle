@@ -9,7 +9,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = 'docker:24.0.6-dind'   // Docker image to use
         DOCKER_CONFIG = "${env.WORKSPACE}/.docker"
-        REGISTRY = 'docker754'                 // Your Docker registry name
+        REGISTRY = 'docker754/cartservice'                 // Your Docker registry name
         DOCKER_CREDENTIALS_ID = 'docker-creds' // Jenkins credentials ID for Docker login
     }
 
