@@ -9,7 +9,7 @@ pipeline {
     environment {
         DOCKER_IMAGE = 'docker:24.0.6-dind'   // Docker image to use
         DOCKER_CONFIG = "${env.WORKSPACE}/.docker"
-        REGISTRY = 'docker754/cartservice'                 // Your Docker registry name
+        REGISTRY = 'docker.io/docker754/cartservice'  // Correct Docker Hub registry path
         DOCKER_CREDENTIALS_ID = 'docker-creds' // Jenkins credentials ID for Docker login
     }
 
@@ -27,7 +27,7 @@ pipeline {
                         dir('three-tier-architecture-demo/cart') {
                             script {
                                 // Build Docker image for the cart service
-                                sh 'docker build -t $REGISTRY/cartservice:latest .'
+                                sh 'docker build -t $REGISTRY:latest .'
                             }
                         }
                     }
@@ -39,10 +39,10 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: "$DOCKER_CREDENTIALS_ID", usernameVariable: 'USER', passwordVariable: 'PASS')]) {
                     script {
-                        // Log in to the Docker registry
-                        sh 'echo $PASS | docker login $REGISTRY -u $USER --password-stdin'
+                        // Log in to Docker Hub (no registry URL needed)
+                        sh 'echo $PASS | docker login -u $USER --password-stdin'
                         // Push the Docker image to the registry
-                        sh 'docker push $REGISTRY/cartservice:latest'
+                        sh 'docker push $REGISTRY:latest'
                     }
                 }
             }
