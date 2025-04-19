@@ -1,7 +1,7 @@
 pipeline {
     agent {
         docker {
-            image 'docker:24.0.6-dind' // Or a Docker image that includes Docker CLI
+            image 'docker:24.0.6-dind' // Docker-in-Docker image
             args '-u 0 -v /var/run/docker.sock:/var/run/docker.sock'
         }
     }
@@ -25,7 +25,10 @@ pipeline {
                 stage('cart') {
                     steps {
                         dir('three-tier-architecture-demo/cart') {
-                            sh 'docker build -t $REGISTRY/cartservice:latest .'
+                            script {
+                                // Build Docker image
+                                sh 'docker build -t $REGISTRY/cartservice:latest .'
+                            }
                         }
                     }
                 }
@@ -35,8 +38,12 @@ pipeline {
         stage('Push to Registry') {
             steps {
                 withCredentials([usernamePassword(credentialsId: "$DOCKER_CREDENTIALS_ID", usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-                    sh 'echo $PASS | docker login $REGISTRY -u $USER --password-stdin'
-                    sh 'docker push $REGISTRY/cartservice:latest'
+                    script {
+                        // Log in to Docker registry
+                        sh 'echo $PASS | docker login $REGISTRY -u $USER --password-stdin'
+                        // Push Docker image
+                        sh 'docker push $REGISTRY/cartservice:latest'
+                    }
                 }
             }
         }
@@ -44,10 +51,10 @@ pipeline {
 
     post {
         success {
-            echo 'Microservices deployed successfully!'
+            echo 'Microservices built and pushed to registry successfully!'
         }
         failure {
-            echo 'Deployment failed. Please check the logs.'
+            echo 'Build or push failed. Please check the logs.'
         }
     }
 }
