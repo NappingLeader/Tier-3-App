@@ -36,12 +36,12 @@ pipeline {
                 ]]) {
                     script {
                         sh """
-                            echo \"${DOCKER_PASSWORD}\" | \
-                            docker login ${DOCKER_REGISTRY} \
-                                -u \"${DOCKER_USERNAME}\" \
+                            echo \${DOCKER_PASS} | \
+                            docker login \${REGISTRY} \
+                                -u \${DOCKER_USER} \
                                 --password-stdin
-                            docker push $REGISTRY:latest
-                        '''
+                            docker push \${REGISTRY}:latest
+                        """
                     }
                 }
             }
@@ -55,7 +55,7 @@ pipeline {
         failure {
             echo "❌ Push failed. Verify:"
             echo "1. Docker Hub credentials in Jenkins"
-            echo "2. Registry path: $REGISTRY"
+            echo "2. Registry path: \$REGISTRY"
         }
     }
 }
