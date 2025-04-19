@@ -7,8 +7,7 @@ pipeline {
     }
 
     environment {
-        REGISTRY = 'docker.io'  // Registry path for image
-        IMAGE_NAME = 'docker754/cartservice'
+        REGISTRY = 'docker.iodocker754/cartservice:latest'  // Registry path for image
         DOCKER_CREDENTIALS_ID = 'docker-creds'       // Jenkins credentials ID
     }
 
